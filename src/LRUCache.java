@@ -51,7 +51,6 @@ public class LRUCache<T, U> implements Cache<T, U> {
 	 * @return the value associated with the key
 	 */
 	public U get (T key) {
-
 		//See if our key exists
 		U finalProduct;
 		Node orderingNode;
@@ -80,8 +79,14 @@ public class LRUCache<T, U> implements Cache<T, U> {
 				next._previous = previous;
 
 			orderingNode._next = _keyOrder._head;
+			if(orderingNode._next != null)
+				orderingNode._next._previous = orderingNode;
+
 			orderingNode._previous = null;
 			_keyOrder._head = orderingNode;
+			if(_keyOrder._tail == orderingNode)
+				_keyOrder._tail = previous;
+
 			if(_keyOrder._tail == null)
 				_keyOrder._tail = orderingNode;
 

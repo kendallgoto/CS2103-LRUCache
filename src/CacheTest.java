@@ -2,6 +2,8 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.LinkedHashMap;
+
 /**
  * Code to test an <tt>LRUCache</tt> implementation.
  */
@@ -80,7 +82,7 @@ public class CacheTest {
 	//Cache Test Suite
 	@Test
 	public void leastRecentlyUsedIsCorrect () {
-		DataProvider<String,Integer> provider = new WebQueryDataProvider();
+		DataProvider<String,Integer> provider = new HashedDataProvider();
 		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, 3);
 		assertEquals(cache.getNumMisses(), 0);
 
@@ -97,6 +99,92 @@ public class CacheTest {
 		assertEquals(cache.getNumMisses(), 4);
 		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //miss (previously evicted)
 		assertEquals(cache.getNumMisses(), 5);
+	}
+
+	@Test
+	public void testBasicEviction() {
+		DataProvider<String,Integer> provider = new HashedDataProvider();
+		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, 2);
+		assertEquals(cache.getNumMisses(), 0);
+
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //miss
+		assertEquals(cache.get("2"), (Integer)("2".hashCode())); //miss
+		assertEquals(cache.getNumMisses(), 2);
+
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //hit
+		assertEquals(cache.get("2"), (Integer)("2".hashCode())); //hit
+		assertEquals(cache.getNumMisses(), 2);
+
+		assertEquals(cache.get("3"), (Integer)("3".hashCode())); //miss (evicts 1)
+		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //miss (evicts 2)
+		assertEquals(cache.getNumMisses(), 4);
+
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //miss (evicted previously) (evicts 3)
+		assertEquals(cache.get("2"), (Integer)("2".hashCode())); //miss (evicted previously) (evicts 4)
+		assertEquals(cache.getNumMisses(), 6);
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //hit
+		assertEquals(cache.get("2"), (Integer)("2".hashCode())); //hit
+		assertEquals(cache.getNumMisses(), 6);
+
+		assertEquals(cache.get("3"), (Integer)("3".hashCode())); //miss (evicted previously) (evicts 1)
+		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //miss (evicted previously) (evicts 2)
+		assertEquals(cache.getNumMisses(), 8);
+	}
+	@Test
+	public void testComplexEviction() {
+		DataProvider<String,Integer> provider = new HashedDataProvider();
+		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, 3);
+		assertEquals(cache.getNumMisses(), 0);
+
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //miss
+		assertEquals(cache.get("2"), (Integer)("2".hashCode())); //miss
+		assertEquals(cache.get("3"), (Integer)("3".hashCode())); //miss
+		assertEquals(cache.getNumMisses(), 3);
+		//Test that we appropriately adjust the order
+		//More Recent -> Least Recent
+		//3 2 [1]
+		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //miss (evict 1)
+		assertEquals(cache.getNumMisses(), 4);
+
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //miss (evict 2))
+		assertEquals(cache.getNumMisses(), 5);
+		//1 4 [3]  -- test that we can reuse 4, evict 2 objects and ensure 4 remains
+
+		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //hit
+		assertEquals(cache.getNumMisses(), 5);
+		//4 1 [3]
+		assertEquals(cache.get("5"), (Integer)("5".hashCode())); //miss (evict 3))
+		assertEquals(cache.get("6"), (Integer)("6".hashCode())); //miss (evict 1))
+		assertEquals(cache.getNumMisses(), 7);
+		//6 5 [4] - ensure 4 remains
+		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //hit
+		assertEquals(cache.getNumMisses(), 7);
+		//4 6 [5]
+		//clear entirely
+		assertEquals(cache.get("1"), (Integer)("1".hashCode())); //miss (evict 5)
+		assertEquals(cache.get("2"), (Integer)("2".hashCode())); //miss (evict 6)
+		assertEquals(cache.get("3"), (Integer)("3".hashCode())); //miss (evict 4)
+		assertEquals(cache.getNumMisses(), 10);
+		//ensure refetching 564 -> 3 misses
+		assertEquals(cache.get("5"), (Integer)("5".hashCode())); //miss (evict 1)
+		assertEquals(cache.get("6"), (Integer)("6".hashCode())); //miss (evict 2)
+		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //miss (evict 3)
+		assertEquals(cache.getNumMisses(), 13);
+		//back to 4 6 [5].
+	}
+	@Test
+	public void testBruteForceEviction() {
+		//seek to test eviction via a brute force loop
+		DataProvider<String,Integer> provider = new HashedDataProvider();
+		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, 3);
+		assertEquals(cache.getNumMisses(), 0);
+		LinkedHashMap<String,Integer> ideal = new LinkedHashMap<>();
+
+		final int NUM_BRUTE_FORCE_ATTEMPTS = 100;
+		for(int i = 0; i < NUM_BRUTE_FORCE_ATTEMPTS; i++) {
+			ideal.
+		}
+
 	}
 
 }
