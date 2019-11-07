@@ -118,8 +118,6 @@ public class LRUCache<T, U> implements Cache<T, U> {
 			Node toBeRemoved = _keyOrder._tail;
 			_table.remove(toBeRemoved._data);
 			_keyOrder._tail = toBeRemoved._previous;
-			toBeRemoved._previous = null;
-			toBeRemoved._next = null;
 			_keyOrder._height--;
 		}
 	}

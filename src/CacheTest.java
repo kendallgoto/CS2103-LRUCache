@@ -10,42 +10,6 @@ import java.util.LinkedHashMap;
 public class CacheTest {
 	//DataProvider testing suite
 	@Test
-	public void WebQueryDP_TestCaptive() { //Internet connection required
-		DataProvider<String, Integer> provider = new WebQueryDataProvider();
-		int captive_apple = provider.get("http://captive.apple.com/");
-		int captive_micro = provider.get("http://www.msftconnecttest.com/");
-		int captive_google = provider.get("http://connectivitycheck.gstatic.com/generate_204");
-		int captive_firefox = provider.get("http://detectportal.firefox.com/success.txt");
-		int captive_https = provider.get("https://httpstat.us/999");
-		assertEquals(captive_apple, 200);
-		assertEquals(captive_micro, 200);
-		assertEquals(captive_google, 204);
-		assertEquals(captive_firefox, 200);
-		assertEquals(captive_https, 999);
-		//fail cases:
-		int malformedURL = provider.get("htt//");
-		int noURL = provider.get("");
-		int relativeURL = provider.get("/something/");
-		int filesystem = provider.get("file://");
-		assertEquals(malformedURL, -1);
-		assertEquals(noURL, -1);
-		assertEquals(relativeURL, -1);
-		assertEquals(filesystem, -1);
-	}
-	@Test
-	public void WebQueryDP_TestFail() {
-		DataProvider<String, Integer> provider = new WebQueryDataProvider();
-		//fail cases:
-		int malformedURL = provider.get("htt//");
-		int noURL = provider.get("");
-		int relativeURL = provider.get("/something/");
-		int filesystem = provider.get("file://");
-		assertEquals(malformedURL, -1);
-		assertEquals(noURL, -1);
-		assertEquals(relativeURL, -1);
-		assertEquals(filesystem, -1);
-	}
-	@Test
 	public void HashedDP_TestString() {
 		DataProvider<String, Integer> provider = new HashedDataProvider();
 		assertEquals(provider.get("hello"), (Integer)("hello".hashCode()));
@@ -54,21 +18,8 @@ public class CacheTest {
 		assertEquals(provider.get(""), (Integer)("".hashCode()));
 	}
 	@Test
-	public void WebQueryDP_QueryCount() {
-		WebQueryDataProvider provider = new WebQueryDataProvider(); //weakest would be DataProvider, but we're using unique methods
-		assertEquals(provider.getQueries(), 0);
-		provider.get("http://captive.apple.com/");
-		assertEquals(provider.getQueries(), 1);
-		provider.get("http://captive.apple.com/");
-		provider.get("http://captive.apple.com/");
-		assertEquals(provider.getQueries(), 3);
-
-		WebQueryDataProvider provider2 = new WebQueryDataProvider();
-		assertEquals(provider2.getQueries(), 0); //test nonstatic incrementation
-	}
-	@Test
 	public void HashedDP_QueryCount() {
-		HashedDataProvider provider = new HashedDataProvider(); //weakest would be DataProvider, but we're using unique methods
+		HashedDataProvider provider = new HashedDataProvider(); //weakest would be DataProvider, but we're using unique methods (getQueries)
 		assertEquals(provider.getQueries(), 0);
 		provider.get("hello");
 		assertEquals(provider.getQueries(), 1);
@@ -172,26 +123,22 @@ public class CacheTest {
 		assertEquals(cache.getNumMisses(), 13);
 		//back to 4 6 [5].
 	}
-	@Test
-	public void testBruteForceEviction() {
-		final int NUM_BRUTE_FORCE_ATTEMPTS = 10000;
-		final int CAPACITY = 3;
-
+	public void testBruteForceEviction(int capacity) {
+		final int NUM_BRUTE_FORCE_ATTEMPTS = 10000; // we need to _at least_ have capacity# of brute force attempts
 		// Use a linkedhashmap as "ideal example" and test it alongside LRUCache to see if we wrongly evict / track LRU
 		// in NUM_BRUTE_FORCE_ATTEMPTS number of random tests
 		DataProvider<String,Integer> provider = new HashedDataProvider();
-		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, CAPACITY);
+		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, capacity);
 		assertEquals(cache.getNumMisses(), 0);
-		LinkedHashMap<String,Integer> ideal = new LinkedHashMap<>(CAPACITY+1);
+		LinkedHashMap<String,Integer> ideal = new LinkedHashMap<>(capacity+1);
 
 		for(int i = 0; i < NUM_BRUTE_FORCE_ATTEMPTS; i++) {
-			String thisEntry = ""+(int)(Math.random() * 5);
+			String thisEntry = ""+(int)(Math.random() * (capacity * 2.0));
 			int current = cache.getNumMisses();
 			if(ideal.containsKey(thisEntry)) { //we should be cached, thus cache.get() doesn't fire a miss
 				int result = cache.get(thisEntry);
 				assertEquals(result, (int) ideal.get(thisEntry));
 				assertEquals(cache.getNumMisses(), current);
-
 				//Update order (reinsert)
 				ideal.remove(thisEntry);
 				ideal.put(thisEntry, result);
@@ -202,12 +149,26 @@ public class CacheTest {
 				assertEquals(result, thisEntry.hashCode());
 				assertEquals(cache.getNumMisses(), current+1);
 			}
-			if(ideal.size() > CAPACITY) {
+			if(ideal.size() > capacity) {
 				String toEvict = ideal.keySet().iterator().next();
 				ideal.remove(toEvict); //remove last key
 			}
 		}
-
+	}
+	@Test
+	public void testBruteForceAnyCapacity() {
+		final int MAX_CAPACITY = 100;
+		for(int i = 0; i < MAX_CAPACITY; i++) {
+			testBruteForceEviction(i);
+		}
+	}
+	@Test
+	public void testHighCapacity() {
+		//in o(n) or slower, this will be a very very slow test (19720ms on my machine vs 61ms in O(1)).
+		//Our "BruteForceEviction" method will not actually evict anything here since the capacity is so high.
+		//As thus, this test will not necessarily fail even if the eviction process is faulty. It is only provided
+		//as a demonstration of the speed of the LRUCache.
+		testBruteForceEviction(50000);
 	}
 
 }
