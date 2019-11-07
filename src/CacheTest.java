@@ -174,15 +174,38 @@ public class CacheTest {
 	}
 	@Test
 	public void testBruteForceEviction() {
-		//seek to test eviction via a brute force loop
-		DataProvider<String,Integer> provider = new HashedDataProvider();
-		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, 3);
-		assertEquals(cache.getNumMisses(), 0);
-		LinkedHashMap<String,Integer> ideal = new LinkedHashMap<>();
+		final int NUM_BRUTE_FORCE_ATTEMPTS = 10000;
+		final int CAPACITY = 3;
 
-		final int NUM_BRUTE_FORCE_ATTEMPTS = 100;
+		// Use a linkedhashmap as "ideal example" and test it alongside LRUCache to see if we wrongly evict / track LRU
+		// in NUM_BRUTE_FORCE_ATTEMPTS number of random tests
+		DataProvider<String,Integer> provider = new HashedDataProvider();
+		Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, CAPACITY);
+		assertEquals(cache.getNumMisses(), 0);
+		LinkedHashMap<String,Integer> ideal = new LinkedHashMap<>(CAPACITY+1);
+
 		for(int i = 0; i < NUM_BRUTE_FORCE_ATTEMPTS; i++) {
-			ideal.
+			String thisEntry = ""+(int)(Math.random() * 5);
+			int current = cache.getNumMisses();
+			if(ideal.containsKey(thisEntry)) { //we should be cached, thus cache.get() doesn't fire a miss
+				int result = cache.get(thisEntry);
+				assertEquals(result, (int) ideal.get(thisEntry));
+				assertEquals(cache.getNumMisses(), current);
+
+				//Update order (reinsert)
+				ideal.remove(thisEntry);
+				ideal.put(thisEntry, result);
+			}
+			else {
+				int result = cache.get(thisEntry);
+				ideal.put(thisEntry, result);
+				assertEquals(result, thisEntry.hashCode());
+				assertEquals(cache.getNumMisses(), current+1);
+			}
+			if(ideal.size() > CAPACITY) {
+				String toEvict = ideal.keySet().iterator().next();
+				ideal.remove(toEvict); //remove last key
+			}
 		}
 
 	}

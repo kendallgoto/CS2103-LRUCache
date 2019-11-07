@@ -8,22 +8,34 @@ import java.util.Hashtable;
  */
 public class LRUCache<T, U> implements Cache<T, U> {
 
+	/**
+	 * Serves as a node in a linked list, with data equal to the key (type T) of its corresponding CacheData object
+	 */
 	private class Node {
-		private T _data;
+		final private T _data;
 		private Node _next;
 		private Node _previous;
 		private Node(T key) {
 			_data = key;
 		}
 	}
+
+	/**
+	 * Serves as a linked list to hold the ordered list of keys stored in our Cache, and manipulated to maintain last-used order.
+	 */
 	private class LinkedList {
 		private Node _head;
 		private Node _tail;
 		private int _height = 0;
 	}
+
+	/**
+	 * Serves as a single object to store the result (type U) of a key query (type T) given by a provider, as well as its corresponding Node
+	 * in the ordered linked list.
+	 */
 	private class CacheData {
-		private U _cacheData;
-		private Node _orderPointer;
+		final private U _cacheData;
+		final private Node _orderPointer;
 		private CacheData(U d, Node pointer) {
 			_cacheData = d;
 			_orderPointer = pointer;
@@ -31,11 +43,12 @@ public class LRUCache<T, U> implements Cache<T, U> {
 	}
 
 	private int _numMisses;
-	private int _capacity;
-	private DataProvider<T, U> _provider;
-	private Hashtable<T, CacheData> _table = new Hashtable<T, CacheData>();
+	final private int _capacity;
+	final private DataProvider<T, U> _provider;
+	final private Hashtable<T, CacheData> _table;
 	final private LinkedList _keyOrder = new LinkedList();
 	/**
+	 * Constructs the LRUCache
 	 * @param provider the data provider to consult for a cache miss
 	 * @param capacity the exact number of (key,value) pairs to store in the cache
 	 */
@@ -94,6 +107,10 @@ public class LRUCache<T, U> implements Cache<T, U> {
 		pruneStructure();
 		return finalProduct;
 	}
+
+	/**
+	 * Prunes the LRUCache, if over capacity, by removing the least recently used element.
+	 */
 	private void pruneStructure() {
 		//if we're over capacity, trim the end
 		if(_keyOrder._height > _capacity) {
