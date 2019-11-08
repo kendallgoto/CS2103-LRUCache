@@ -9,6 +9,10 @@ import java.util.LinkedHashMap;
  */
 public class CacheTest {
 	//DataProvider testing suite
+
+    /**
+     * Test to ensure that the provider produces the correct value
+     */
 	@Test
 	public void HashedDP_TestString() {
 		DataProvider<String, Integer> provider = new HashedDataProvider();
@@ -17,6 +21,10 @@ public class CacheTest {
 		assertEquals(provider.get("123"), (Integer)("123".hashCode()));
 		assertEquals(provider.get(""), (Integer)("".hashCode()));
 	}
+
+    /**
+     * Test to ensure that the provider's query count accurately reflects the number of queries
+     */
 	@Test
 	public void HashedDP_QueryCount() {
 		HashedDataProvider provider = new HashedDataProvider(); //weakest would be DataProvider, but we're using unique methods (getQueries)
@@ -31,6 +39,27 @@ public class CacheTest {
 	}
 
 	//Cache Test Suite
+
+    /**
+     * Test to ensure that the provider's query count matches the cache's "miss" count
+     */
+    @Test
+    public void testNumMissLies() {
+        HashedDataProvider provider = new HashedDataProvider();
+        Cache<String,Integer> cache = new LRUCache<String,Integer>(provider, 3);
+        assertEquals(cache.getNumMisses(), 0);
+        assertEquals(cache.getNumMisses(), provider.getQueries());
+        cache.get("1");
+        assertEquals(cache.getNumMisses(), provider.getQueries());
+        cache.get("2");
+        assertEquals(cache.getNumMisses(), provider.getQueries());
+        cache.get("1");
+        assertEquals(cache.getNumMisses(), provider.getQueries());
+    }
+
+    /**
+     * Basic test to ensure that the last recently used item is properly sequenced (and thus evicted)
+     */
 	@Test
 	public void leastRecentlyUsedIsCorrect () {
 		DataProvider<String,Integer> provider = new HashedDataProvider();
@@ -52,6 +81,9 @@ public class CacheTest {
 		assertEquals(cache.getNumMisses(), 5);
 	}
 
+    /**
+     * Test basic eviction of the last element, without reordering the cache's internal storage.
+     */
 	@Test
 	public void testBasicEviction() {
 		DataProvider<String,Integer> provider = new HashedDataProvider();
@@ -81,6 +113,10 @@ public class CacheTest {
 		assertEquals(cache.get("4"), (Integer)("4".hashCode())); //miss (evicted previously) (evicts 2)
 		assertEquals(cache.getNumMisses(), 8);
 	}
+
+    /**
+     * Test eviction in the case of resorted elements from the middle of a cache.
+     */
 	@Test
 	public void testComplexEviction() {
 		DataProvider<String,Integer> provider = new HashedDataProvider();
@@ -123,6 +159,11 @@ public class CacheTest {
 		assertEquals(cache.getNumMisses(), 13);
 		//back to 4 6 [5].
 	}
+
+    /**
+     * Tests a LRUCache using a simple LinkedHashMap equivalent implementation for proper eviction, results, and numMisses() counting.
+     * @param capacity max capacity of the LRUCache
+     */
 	public void testBruteForceEviction(int capacity) {
 		final int NUM_BRUTE_FORCE_ATTEMPTS = 10000; // we need to _at least_ have capacity# of brute force attempts
 		// Use a linkedhashmap as "ideal example" and test it alongside LRUCache to see if we wrongly evict / track LRU
@@ -155,6 +196,10 @@ public class CacheTest {
 			}
 		}
 	}
+
+    /**
+     * Rapidly tests collections of sizes 0-100 to ensure for accurate eviction
+     */
 	@Test
 	public void testBruteForceAnyCapacity() {
 		final int MAX_CAPACITY = 100;
@@ -162,6 +207,10 @@ public class CacheTest {
 			testBruteForceEviction(i);
 		}
 	}
+
+    /**
+     * Tests that high capacities do not take unruly amounts of time.
+     */
 	@Test
 	public void testHighCapacity() {
 		//in o(n) or slower, this will be a very very slow test (19720ms on my machine vs 61ms in O(1)).
